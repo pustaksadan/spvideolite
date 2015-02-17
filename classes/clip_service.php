@@ -27,111 +27,27 @@ class SPVIDEOLITE_CLASS_ClipService {
     }
 
     public function validateClipCode( $code, $provider = null ) {
-        return $code;
-    }
-
-    public function findClipsList( $type, $page, $limit )
-    {
-        if ( $type == 'toprated' )
-        {
-            $first = ( $page - 1 ) * $limit;
-            $topRatedList = BOL_RateService::getInstance()->findMostRatedEntityList('video_rates', $first, $limit);
-
-            $clipArr = $this->clipDao->findByIdList(array_keys($topRatedList));
-
-            $clips = array();
-
-            foreach ( $clipArr as $key => $clip )
-            {
-                $clipArrItem = (array) $clip;
-                $clips[$key] = $clipArrItem;
-                $clips[$key]['score'] = $topRatedList[$clipArrItem['id']]['avgScore'];
-                $clips[$key]['rates'] = $topRatedList[$clipArrItem['id']]['ratesCount'];
-            }
-
-            usort($clips, array('VIDEO_BOL_ClipService', 'sortArrayItemByDesc'));
+        $iframeTag="/<iframe.+?<\/iframe>/i";
+        $embedTag="/<embed.+?<\/embed>/i";
+        $objectTag="/<object.+?<\/object>/i";
+        $videoTag="/<video.+?<\/video>/i";
+        $matches = array();
+        if (preg_match_all($iframeTag, $code, $matches)) {
+            return $matches[0][0];
         }
-        else
-        {
-            $clips = $this->clipDao->getClipsList($type, $page, $limit);
+        if (preg_match_all($embedTag, $code, $matches)) {
+            return $matches[0][0];
         }
-
-        $list = array();
-        if ( is_array($clips) )
-        {
-            foreach ( $clips as $key => $clip )
-            {
-                $clip = (array) $clip;
-                $list[$key] = $clip;
-                $list[$key]['thumb'] = $this->getClipThumbUrl($clip['id'], $clip['code'], $clip['thumbUrl']);
-            }
+        if (preg_match_all($objectTag, $code, $matches)) {
+            return $matches[0][0];
         }
-
-        return $list;
-    }
-
-    public function updateClip( VIDEO_BOL_Clip $clip , $notify = true)
-    {
-        $this->clipDao->save($clip);
-        
-        $this->cleanListCache();
-
-        if ($notify) {
-            $event = new OW_Event(self::EVENT_AFTER_EDIT, array('clipId' => $clip->id));
-            OW::getEventManager()->trigger($event);
-
-            $event = new OW_Event('feed.action', array(
-                'pluginKey' => 'video',
-                'entityType' => 'video_comments',
-                'entityId' => $clip->id,
-                'userId' => $clip->userId
-            ));
-            OW::getEventManager()->trigger($event);    
-        }        
-
-        return $clip->id;
-    }
-
-    public function findUserClipsList( $userId, $page, $itemsNum, $exclude = null ) {
-        $clips = $this->clipDao->getUserClipsList($userId, $page, $itemsNum, $exclude);
-
-        if ( is_array($clips) ) {
-            $list = array();
-            foreach ( $clips as $key => $clip ) {
-                $clip = (array) $clip;
-                $list[$key] = $clip;
-                $list[$key]['thumb'] = $this->getClipThumbUrl($clip['id'], $clip['code'], $clip['thumbUrl']);
-            }
-
-            return $list;
+        if (preg_match_all($videoTag, $code, $matches)) {
+            return $matches[0][0];
         }
-
-        return null;
+        return '';
     }
 
-    public function findTaggedClipsList( $tag, $page, $limit ) {
-        $first = ($page - 1 ) * $limit;
-
-        $clipIdList = BOL_TagService::getInstance()->findEntityListByTag('video', $tag, $first, $limit);
-
-        $clips = $this->clipDao->findByIdList($clipIdList);
-
-        $list = array();
-        if ( is_array($clips) ) {
-            foreach ( $clips as $key => $clip ) {
-                $clip = (array) $clip;
-                if ($clip['status']!='approved') continue; // skip clips that werent approved yet
-                $list[$key] = $clip;
-                $list[$key]['thumb'] = $this->getClipThumbUrl($clip['id'], $clip['code'], $clip['thumbUrl']);
-            }
-        }
-
-        return $list;
-    }
-
-    public function getClipThumbUrl( $clipId, $code = null, $thumbUrl = null ) {
-        return $this->originalClassInstance->getClipThumbUrl( $clipId, $code, $thumbUrl );
-    }
+    
 
     public function __call( $method, $args ) {
         if ( !method_exists( $this, $method ) )

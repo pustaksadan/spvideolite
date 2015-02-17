@@ -138,15 +138,17 @@ class SPVIDEOLITE_CLASS_EventHandler
      */
     public static function correctPlayerSize(BASE_CLASS_EventCollector $event) {
         OW::getDocument()->addOnloadScript("
-      var parent = $('.ow_video_player').parent();
-      var player = $('.ow_video_player');
-      var iframe = $('.ow_video_player iframe');
-      var remains = $('#enlarged-remaining');
-      var newHeight = iframe.height()*( player.width()/iframe.width() );
-      
-      iframe.height(newHeight);
-      iframe.width(player.width());
-    ");
+            if ($('.ow_video_player .sublime').length != 0) {
+                var videoLayer = $('.ow_video_player iframe');      
+                var parent = $('.ow_video_player').parent();
+                var player = $('.ow_video_player');
+                var remains = $('#enlarged-remaining');
+                var newHeight = videoLayer.height()*( player.width()/videoLayer.width() );
+
+                videoLayer.height(newHeight);
+                videoLayer.width(player.width());
+            }
+        ");
     }
     
     /**
@@ -156,14 +158,23 @@ class SPVIDEOLITE_CLASS_EventHandler
         $language = OW::getLanguage();
         $event->add(array('href' => 'javascript:;', 'id' => 'btn-resize-player', 'class' => 'btn-resize-player', 'label' => $language->text('spvideolite', 'btn_larger')));
         OW::getDocument()->addStyleSheet(OW::getPluginManager()->getPlugin('spvideolite')->getStaticCssUrl() . 'spvideo_player.css');
+        OW::getDocument()->addScript('//cdn.sublimevideo.net/js/4cr7as1k.js');
+        
         OW::getDocument()->addOnloadScript("
       $('<div id=\"enlarged-remaining\" class=\"ow_superwide ow_left\" style=\"display:none\"></div>').insertAfter($('.ow_video_player').parent());
       $('#btn-resize-player').click(function(){
         var parent = $('.ow_video_player').parent();
         var player = $('.ow_video_player');
         var iframe = $('.ow_video_player iframe');
+        if ($('.ow_video_player .sublime').length != 0) {
+            iframe = $('.ow_video_player video');
+        }
         var remains = $('#enlarged-remaining');
-        var origHeight = player.height();
+        var origHeight = iframe.height();
+        if ($('.ow_video_player .sublime').length != 0) {
+            origHeight = $('.ow_video_player .sublimevideo-View').height();
+        }
+        console.log(origHeight);
 
         if (player.attr('data-origheight')) {
           origHeight = parseInt(player.attr('data-origheight'));
@@ -183,6 +194,9 @@ class SPVIDEOLITE_CLASS_EventHandler
               iframe.height(newHeight);
             }
             iframe.width(player.width());
+            if ($('.ow_video_player .sublime').length != 0) {
+                sublime($('.ow_video_player .sublime').attr('id')).setSize(player.width(),newHeight);
+            }
             $('#btn-resize-player a').html('" . $language->text('spvideolite', 'btn_smaller') . "');          
             remains.show();
             $('.ow_video_description').appendTo(remains);
@@ -197,6 +211,9 @@ class SPVIDEOLITE_CLASS_EventHandler
           parent.addClass('ow_left');
           iframe.width(player.width());
           iframe.height(origHeight);
+          if ($('.ow_video_player .sublime').length != 0) {
+              sublime($('.ow_video_player .sublime').attr('id')).setSize(player.width(),origHeight);
+          }
           $('#btn-resize-player a').html('" . $language->text('spvideolite', 'btn_larger') . "');
           $('.ow_video_description').appendTo(parent);
           $('#video-show-more').appendTo(parent);
@@ -208,7 +225,7 @@ class SPVIDEOLITE_CLASS_EventHandler
       });
     ");
     }
-
+    
     function initServiceHooking() {
         SPVIDEOLITE_CLASS_ClipService::getInstance();
     }
