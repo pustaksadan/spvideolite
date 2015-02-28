@@ -45,6 +45,7 @@ class SPVIDEOLITE_CLASS_ClipService
         if (preg_match_all($videoTag, $code, $matches)) {
             return $matches[0][0];
         }
+
         return '';
     }
     
